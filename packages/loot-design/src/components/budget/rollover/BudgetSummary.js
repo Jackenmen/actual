@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { connect } from 'react-redux';
 
 import Component from '@reactions/component';
 import { css } from 'glamor';
@@ -6,6 +7,7 @@ import { css } from 'glamor';
 import { rolloverBudget } from 'loot-core/src/client/queries';
 import * as monthUtils from 'loot-core/src/shared/months';
 
+import * as actions from '../../../../../loot-core/src/client/actions';
 import { colors, styles } from '../../../style';
 import DotsHorizontalTriple from '../../../svg/v1/DotsHorizontalTriple';
 import ArrowButtonDown1 from '../../../svg/v2/ArrowButtonDown1';
@@ -17,7 +19,7 @@ import {
   Tooltip,
   Menu,
   HoverTarget,
-  AlignedText
+  AlignedText,
 } from '../../common';
 import NotesButton from '../../NotesButton';
 import CellValue from '../../spreadsheet/CellValue';
@@ -37,7 +39,7 @@ function TotalsList({ prevMonthName, collapsed }) {
         {
           flexDirection: 'row',
           lineHeight: 1.5,
-          justifyContent: 'center'
+          justifyContent: 'center',
         },
         !collapsed && {
           padding: '5px 0',
@@ -45,19 +47,19 @@ function TotalsList({ prevMonthName, collapsed }) {
           backgroundColor: colors.n11,
           borderTopWidth: 1,
           borderBottomWidth: 1,
-          borderColor: colors.n9
+          borderColor: colors.n9,
         },
         collapsed && {
-          padding: 7
+          padding: 7,
         },
-        styles.smallText
+        styles.smallText,
       ]}
     >
       <View
         style={{
           textAlign: 'right',
           marginRight: 10,
-          minWidth: 50
+          minWidth: 50,
         }}
       >
         <HoverTarget
@@ -172,9 +174,9 @@ function ToBudget({ month, prevMonthName, collapsed, onBudgetAction }) {
                           marginBottom: -1,
                           borderBottom: '1px solid transparent',
                           ':hover': {
-                            borderColor: isNegative ? colors.r4 : colors.p5
-                          }
-                        }
+                            borderColor: isNegative ? colors.r4 : colors.p5,
+                          },
+                        },
                       ])}
                     >
                       {format(num, 'financial')}
@@ -199,16 +201,16 @@ function ToBudget({ month, prevMonthName, collapsed, onBudgetAction }) {
                         items={[
                           {
                             name: 'transfer',
-                            text: 'Move to a category'
+                            text: 'Move to a category',
                           },
                           {
                             name: 'buffer',
-                            text: 'Hold for next month'
+                            text: 'Hold for next month',
                           },
                           {
                             name: 'reset-buffer',
-                            text: "Reset next month's buffer"
-                          }
+                            text: "Reset next month's buffer",
+                          },
                         ]}
                       />
                     </Tooltip>
@@ -223,12 +225,12 @@ function ToBudget({ month, prevMonthName, collapsed, onBudgetAction }) {
                   )}
                   {state.menuOpen === 'transfer' && (
                     <TransferTooltip
-                      initialAmountName="leftover"
+                      initialAmount={availableValue}
                       onClose={() => setState({ menuOpen: null })}
                       onSubmit={(amount, category) => {
                         onBudgetAction(month, 'transfer-available', {
                           amount,
-                          category
+                          category,
                         });
                       }}
                     />
@@ -243,12 +245,12 @@ function ToBudget({ month, prevMonthName, collapsed, onBudgetAction }) {
   );
 }
 
-export default React.memo(function BudgetSummary({ month }) {
+function BudgetSummaryComponent({ month, localPrefs }) {
   let {
     currentMonth,
     summaryCollapsed: collapsed,
     onBudgetAction,
-    onToggleSummaryCollapse
+    onToggleSummaryCollapse,
   } = useRollover();
 
   let [menuOpen, setMenuOpen] = useState(false);
@@ -263,6 +265,8 @@ export default React.memo(function BudgetSummary({ month }) {
   let prevMonthName = monthUtils.format(monthUtils.prevMonth(month), 'MMM');
 
   let ExpandOrCollapseIcon = collapsed ? ArrowButtonDown1 : ArrowButtonUp1;
+
+  let goalTemplatesEnabled = localPrefs['flags.goalTemplatesEnabled'];
 
   return (
     <View
@@ -279,25 +283,25 @@ export default React.memo(function BudgetSummary({ month }) {
         overflow: 'hidden',
         '& .hover-visible': {
           opacity: 0,
-          transition: 'opacity .25s'
+          transition: 'opacity .25s',
         },
         '&:hover .hover-visible': {
-          opacity: 1
-        }
+          opacity: 1,
+        },
       }}
     >
       <NamespaceContext.Provider value={monthUtils.sheetForMonth(month)}>
         <View
           style={[
             { padding: '0 13px' },
-            collapsed ? { margin: '10px 0' } : { marginTop: 16 }
+            collapsed ? { margin: '10px 0' } : { marginTop: 16 },
           ]}
         >
           <View
             style={{
               position: 'absolute',
               left: 10,
-              top: 0
+              top: 0,
             }}
           >
             <Button
@@ -321,9 +325,9 @@ export default React.memo(function BudgetSummary({ month }) {
                 marginTop: 3,
                 fontSize: 18,
                 fontWeight: 500,
-                textDecorationSkip: 'ink'
+                textDecorationSkip: 'ink',
               },
-              currentMonth === month && { textDecoration: 'underline' }
+              currentMonth === month && { textDecoration: 'underline' },
             ])}
           >
             {monthUtils.format(month, 'MMMM')}
@@ -335,7 +339,7 @@ export default React.memo(function BudgetSummary({ month }) {
               right: 10,
               top: 0,
               flexDirection: 'row',
-              alignItems: 'center'
+              alignItems: 'center',
             }}
           >
             <View>
@@ -372,8 +376,16 @@ export default React.memo(function BudgetSummary({ month }) {
                       { name: 'set-zero', text: 'Set budgets to zero' },
                       {
                         name: 'set-3-avg',
-                        text: 'Set budgets to 3 month avg'
-                      }
+                        text: 'Set budgets to 3 month avg',
+                      },
+                      goalTemplatesEnabled && {
+                        name: 'apply-goal-template',
+                        text: 'Apply budget template',
+                      },
+                      goalTemplatesEnabled && {
+                        name: 'overwrite-goal-template',
+                        text: 'Overwrite with budget template',
+                      },
                     ]}
                   />
                 </Tooltip>
@@ -389,7 +401,7 @@ export default React.memo(function BudgetSummary({ month }) {
               padding: '10px 20px',
               justifyContent: 'space-between',
               backgroundColor: colors.n11,
-              borderTop: '1px solid ' + colors.n10
+              borderTop: '1px solid ' + colors.n10,
             }}
           >
             <ToBudget
@@ -410,4 +422,9 @@ export default React.memo(function BudgetSummary({ month }) {
       </NamespaceContext.Provider>
     </View>
   );
-});
+}
+
+export const BudgetSummary = connect(
+  state => ({ localPrefs: state.prefs.local }),
+  actions,
+)(BudgetSummaryComponent);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 import * as d from 'date-fns';
 
@@ -10,7 +10,7 @@ import {
   Text,
   Block,
   P,
-  AlignedText
+  AlignedText,
 } from 'loot-design/src/components/common';
 import { colors, styles } from 'loot-design/src/style';
 
@@ -19,27 +19,27 @@ import { cashFlowByDate } from './graphs/cash-flow-spreadsheet';
 import CashFlowGraph from './graphs/CashFlowGraph';
 import Header from './Header';
 import useReport from './useReport';
-import { useArgsMemo } from './util';
 
 function CashFlow() {
   const [allMonths, setAllMonths] = useState(null);
   const [start, setStart] = useState(
-    monthUtils.subMonths(monthUtils.currentMonth(), 30)
+    monthUtils.subMonths(monthUtils.currentMonth(), 30),
   );
   const [end, setEnd] = useState(monthUtils.currentDay());
 
   const [isConcise, setIsConcise] = useState(() => {
     const numDays = d.differenceInCalendarDays(
       d.parseISO(end),
-      d.parseISO(start)
+      d.parseISO(start),
     );
     return numDays > 31 * 3;
   });
 
-  const data = useReport(
-    'cash_flow',
-    useArgsMemo(cashFlowByDate)(start, end, isConcise)
+  const params = useMemo(
+    () => cashFlowByDate(start, end, isConcise),
+    [start, end, isConcise],
   );
+  const data = useReport('cash_flow', params);
 
   useEffect(() => {
     async function run() {
@@ -52,7 +52,7 @@ function CashFlow() {
         .rangeInclusive(earliestMonth, monthUtils.currentMonth())
         .map(month => ({
           name: month,
-          pretty: monthUtils.format(month, 'MMMM, yyyy')
+          pretty: monthUtils.format(month, 'MMMM, yyyy'),
         }))
         .reverse();
 
@@ -64,7 +64,7 @@ function CashFlow() {
   function onChangeDates(start, end) {
     const numDays = d.differenceInCalendarDays(
       d.parseISO(end),
-      d.parseISO(start)
+      d.parseISO(start),
     );
     const isConcise = numDays > 31 * 3;
 
@@ -99,7 +99,7 @@ function CashFlow() {
           backgroundColor: 'white',
           paddingLeft: 30,
           paddingRight: 30,
-          overflow: 'auto'
+          overflow: 'auto',
         }}
       >
         <View
@@ -108,7 +108,7 @@ function CashFlow() {
             paddingRight: 20,
             flexShrink: 0,
             alignItems: 'flex-end',
-            color: colors.n3
+            color: colors.n3,
           }}
         >
           <AlignedText

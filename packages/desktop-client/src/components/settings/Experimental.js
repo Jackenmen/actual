@@ -11,9 +11,10 @@ export default function ExperimentalFeatures({ prefs, savePrefs }) {
   let flags = Object.fromEntries(
     Object.entries(prefs)
       .filter(([key]) => key.startsWith('flags.'))
-      .map(([key, value]) => [key.replace('flags.', ''), value])
+      .map(([key, value]) => [key.replace('flags.', ''), value]),
   );
   let disabled = prefs.budgetType === 'report' && flags.reportBudget;
+
   return (
     <Setting
       primaryAction={
@@ -22,7 +23,7 @@ export default function ExperimentalFeatures({ prefs, savePrefs }) {
             <label
               style={{
                 display: 'flex',
-                color: disabled ? colors.n5 : 'inherit'
+                color: disabled ? colors.n5 : 'inherit',
               }}
             >
               <Checkbox
@@ -45,13 +46,25 @@ export default function ExperimentalFeatures({ prefs, savePrefs }) {
 
             <label style={{ display: 'flex' }}>
               <Checkbox
-                id="report-budget-flag"
+                id="sync-account-flag"
                 checked={flags.syncAccount}
                 onChange={() => {
                   savePrefs({ 'flags.syncAccount': !flags.syncAccount });
                 }}
               />{' '}
               <View>Enable account syncing</View>
+            </label>
+            <label style={{ display: 'flex' }}>
+              <Checkbox
+                id="goal-templates-flag"
+                checked={flags.goalTemplatesEnabled}
+                onChange={() => {
+                  savePrefs({
+                    'flags.goalTemplatesEnabled': !flags.goalTemplatesEnabled,
+                  });
+                }}
+              />{' '}
+              <View>Enable Goal Templates</View>
             </label>
           </View>
         ) : (
@@ -60,7 +73,7 @@ export default function ExperimentalFeatures({ prefs, savePrefs }) {
             style={{
               flexShrink: 0,
               alignSelf: 'flex-start',
-              color: colors.p4
+              color: colors.p4,
             }}
           >
             I understand the risks, show experimental features
