@@ -53,6 +53,10 @@ function getAccountBalance(account) {
   }
 }
 
+async function updateAccountIban(id, iban) {
+  await db.runQuery('UPDATE accounts SET iban = ? WHERE id = ?', [iban, id]);
+}
+
 async function updateAccountBalance(id, balance) {
   await db.runQuery('UPDATE accounts SET balance_current = ? WHERE id = ?', [
     amountToInteger(balance),
@@ -207,18 +211,25 @@ async function downloadNordigenTransactions(
     }
 
     const {
+      iban,
       transactions: { booked },
       balances,
       startingBalance,
     } = res;
 
     return {
+      iban,
       transactions: booked,
       accountBalances: balances,
       startingBalance,
     };
   }
   return;
+}
+
+async function resolvePayeeFromIban(trans, payeeIban) {
+  let payee = await db.getPayeeByIban(payeeIban).id;
+  return payee?.id;
 }
 
 async function resolvePayee(trans, payeeName, payeesToCreate) {
@@ -332,6 +343,10 @@ async function normalizeNordigenTransactions(transactions, acctId) {
             trans.debtorAccount.iban.slice(-4) +
             ')',
         );
+        let transferPayee = resolvePayeeFromIban(trans.debtorAccount.iban);
+        if (transferPayee != null) {
+          trans.payee = transferPayee;
+        }
       }
       payee_name = nameParts.join(' ');
     } else {
@@ -351,6 +366,10 @@ async function normalizeNordigenTransactions(transactions, acctId) {
             trans.creditorAccount.iban.slice(-4) +
             ')',
         );
+        let transferPayee = resolvePayeeFromIban(trans.creditorAccount.iban);
+        if (transferPayee != null) {
+          trans.payee = transferPayee;
+        }
       }
       payee_name = nameParts.join(' ');
     }
@@ -774,13 +793,8 @@ export async function syncNordigenAccount(userId, userKey, id, acctId, bankId) {
       date = startingDate;
     }
 
-    let { transactions, accountBalance } = await downloadNordigenTransactions(
-      userId,
-      userKey,
-      acctId,
-      bankId,
-      date,
-    );
+    let { iban, transactions, accountBalance } =
+      await downloadNordigenTransactions(userId, userKey, acctId, bankId, date);
 
     if (transactions.length === 0) {
       return { added: [], updated: [] };
@@ -789,6 +803,7 @@ export async function syncNordigenAccount(userId, userKey, id, acctId, bankId) {
     transactions = transactions.map(trans => ({ ...trans, account: id }));
 
     return runMutator(async () => {
+      await updateAccountIban(id, iban);
       const result = await reconcileNordigenTransactions(id, transactions);
       await updateAccountBalance(id, accountBalance);
       return result;
@@ -797,7 +812,7 @@ export async function syncNordigenAccount(userId, userKey, id, acctId, bankId) {
     // Otherwise, download transaction for the past 30 days
     const startingDay = monthUtils.subDays(monthUtils.currentDay(), 30);
 
-    const { transactions, startingBalance } =
+    const { iban, transactions, startingBalance } =
       await downloadNordigenTransactions(
         userId,
         userKey,
@@ -832,6 +847,7 @@ export async function syncNordigenAccount(userId, userKey, id, acctId, bankId) {
         starting_balance_flag: true,
       });
 
+      await updateAccountIban(id, iban);
       let result = await reconcileNordigenTransactions(id, transactions);
       return {
         ...result,
