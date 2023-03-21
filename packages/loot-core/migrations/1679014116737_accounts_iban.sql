@@ -1,7 +1,13 @@
 BEGIN TRANSACTION;
 
-ALTER TABLE accounts ADD COLUMN account_number TEXT;
+CREATE TABLE account_numbers
+  (id TEXT PRIMARY KEY,
+   acct TEXT,
+   type TEXT NOT NULL,
+   number TEXT NOT NULL UNIQUE,
+   FOREIGN KEY(acct) REFERENCES accounts(id));
 
-CREATE INDEX accounts_account_number ON accounts(account_number);
+CREATE UNIQUE INDEX acct_type ON account_numbers(acct, type);
+CREATE INDEX acct_type_number ON account_numbers(acct, type, number);
 
 COMMIT;

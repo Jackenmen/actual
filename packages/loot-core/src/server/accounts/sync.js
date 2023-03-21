@@ -54,10 +54,13 @@ function getAccountBalance(account) {
 }
 
 async function updateAccountNumber(id, type, number) {
-  await db.runQuery('UPDATE accounts SET account_number = ? WHERE id = ?', [
-    `${type}_${number}`,
-    id,
-  ]);
+  await db.runQuery(
+    `
+      INSERT INTO account_numbers (id, acct, type, number) VALUES (?, ?, ?, ?)
+      ON CONFLICT REPLACE
+    `,
+    [uuid.v4Sync(), id, type, number],
+  );
 }
 
 async function updateAccountBalance(id, balance) {

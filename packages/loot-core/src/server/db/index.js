@@ -525,8 +525,9 @@ export async function getPayeeByAccountNumber(type, number) {
   return first(
     `SELECT p.* FROM payees p
      INNER JOIN accounts a ON (p.transfer_acct = a.id AND a.tombstone = 0)
-     WHERE p.tombstone = 0 AND p.account_number = ?`,
-    [`${type}_${number}`],
+     INNER JOIN account_numbers an on (p.transfer_acct = an.id)
+     WHERE p.tombstone = 0 AND an.type = ? AND an.number = ?`,
+    [type, number],
   );
 }
 
