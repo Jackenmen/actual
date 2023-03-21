@@ -805,7 +805,7 @@ handlers['accounts-link'] = async function ({
   await db.update('accounts', {
     id: upgradingId,
     account_id: account.account_id,
-    iban: account.iban,
+    account_number: `iban_${account.iban}`,
     official_name: account.official_name,
     type: fromPlaidAccountType(account.type),
     balance_current: amountToInteger(account.balances.current),
@@ -847,7 +847,7 @@ handlers['nordigen-accounts-link'] = async function ({
     await db.update('accounts', {
       id,
       account_id: account.account_id,
-      iban: account.iban,
+      account_number: `iban_${account.iban}`,
       bank: bank.id,
     });
   } else {
@@ -855,7 +855,7 @@ handlers['nordigen-accounts-link'] = async function ({
     await db.insertWithUUID('accounts', {
       id,
       account_id: account.account_id,
-      iban: account.iban,
+      account_number: `iban_${account.iban}`,
       mask: account.mask,
       name: account.name,
       official_name: account.official_name,
